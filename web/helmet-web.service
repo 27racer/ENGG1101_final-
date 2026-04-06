@@ -1,0 +1,15 @@
+[Unit]
+Description=Smart Helmet React Web App (SPA)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hello/ENGG1101_final-/web
+ExecStart=/usr/bin/python3 /home/hello/ENGG1101_final-/web/serve_spa.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

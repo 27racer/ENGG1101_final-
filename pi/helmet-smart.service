@@ -1,0 +1,16 @@
+[Unit]
+Description=Smart Helmet Sensor + Alert System
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hello/ENGG1101_final-/pi
+ExecStart=/home/hello/ENGG1101_final-/pi/venv/bin/python3 smart_helmet.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+User=hello
+
+[Install]
+WantedBy=multi-user.target

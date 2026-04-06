@@ -1,0 +1,16 @@
+[Unit]
+Description=Smart Helmet REST API Bridge
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hello/ENGG1101_final-/pi
+ExecStart=/home/hello/ENGG1101_final-/pi/venv/bin/python3 helmet_api.py
+Environment="HELMET_API_PORT=8001"
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
