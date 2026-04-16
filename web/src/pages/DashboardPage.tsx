@@ -1,7 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BrandLogo } from "../components/brand/BrandLogo";
-import { useAlerts } from "../context/AlertContext";
 import { useSensorData } from "../context/SensorDataContext";
 import { buildInstalledSystems } from "../sensorTelemetryContent";
 import {
@@ -45,7 +44,6 @@ function IconBell() {
 
 export function DashboardPage() {
   const { data, alertLevel, connectionStatus } = useSensorData();
-  const { triggerAlert } = useAlerts();
   const [expandedReadingId, setExpandedReadingId] = useState<string | null>(null);
   const isLive = connectionStatus === "live";
 
@@ -201,13 +199,13 @@ export function DashboardPage() {
                           <button
                             type="button"
                             className="sensor-readings__test"
-                            disabled={!isLive}
+                            disabled
                             onClick={(e) => {
                               e.stopPropagation();
-                              triggerAlert(s.alert);
                             }}
+                            title="Alert overlay disabled"
                           >
-                            Test alarm
+                            Test alarm disabled
                           </button>
                         </div>
                       ) : null}
