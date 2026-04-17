@@ -274,26 +274,12 @@ export function DashboardPage() {
                               : s.detailText}
                           </p>
                           <p className="sensor-readings__hw">{s.hardware}</p>
-                          <button
-                            type="button"
-                            className="sensor-readings__test"
-                            disabled
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                            title="Use the top-right bell button to control red alert screens"
-                          >
-                            Red alert control moved to bell icon
-                          </button>
                         </div>
                       ) : null}
                     </div>
                   );
                 })}
               </div>
-              <p className="at-a-glance-hint hint">
-                <strong>Red alert screen</strong> is now controlled by the bell icon at the top right of the home screen.
-              </p>
             </div>
           </div>
         </div>
