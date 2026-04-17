@@ -214,6 +214,14 @@ body { background: var(--bg); color: var(--text); }
   align-items: center;
   justify-content: center;
   color: #fff;
+  transition: background .15s, box-shadow .15s, transform .15s;
+}
+.hero-bell--active {
+  background: rgba(220, 38, 38, 0.92);
+  box-shadow: 0 10px 24px rgba(127, 29, 29, 0.28);
+}
+.hero-bell:active {
+  transform: scale(0.97);
 }
 .hero-bell svg { width: 20px; height: 20px; }
 
@@ -733,6 +741,12 @@ body { background: var(--bg); color: var(--text); }
 }
 .sensor-readings__test:active {
   opacity: 0.9;
+}
+.sensor-readings__test--active {
+  color: #fff;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  border-color: rgba(220, 38, 38, 0.42);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.24);
 }
 .sensor-readings__test:disabled {
   opacity: 0.45;

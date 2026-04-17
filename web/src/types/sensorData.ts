@@ -38,10 +38,10 @@ export interface SensorReading {
   // Touch sensor — GPIO18  (HIGH = head contact)
   touchActive: boolean;
 
-  // IR sensor — GPIO20  (active-low: LOW = head present)
+  // Rear IR sensor — GPIO20  (active-low: LOW = object detected behind helmet)
   irDetecting: boolean;
 
-  // Derived from Touch + IR (HelmetRemovalDetector logic)
+  // Derived from touch-only helmet detection logic
   helmetOn: boolean;
 }
 
@@ -54,11 +54,12 @@ export type AlertLevel =
   | "HEAT CAUTION"  // Heat index ≥ 27 °C
   | "PROX WARN"     // HC-SR04 < 100 cm
   | "TOF WARN"      // VL53L0X < 600 mm
+  | "REAR WARN"     // Rear IR sensor detected something behind the helmet
   | "HEAT DANGER"   // Heat index ≥ 32 °C
   | "HEAT EXTREME"  // Heat index ≥ 40 °C
   | "PROX DANGER"   // HC-SR04 < 40 cm
   | "TOF DANGER"    // VL53L0X < 250 mm
-  | "HELMET OFF"    // Both Touch + IR lost for 3 s (priority 4)
+  | "HELMET OFF"    // Touch sensor lost for 3 s (priority 4, buzzer silenced)
   | "!! FALL !!";   // Free-fall + impact OR tumble  (priority 3→ display 1)
 
 // ─────────────────────────────────────────────────────────────
@@ -72,7 +73,7 @@ export const THRESHOLDS = {
   GYRO_TUMBLE_THRESHOLD:  250.0, // °/s — rapid rotation = tumbling
 
   // Helmet Removal
-  HELMET_REMOVAL_SECONDS: 3,     // both sensors must agree "no head"
+  HELMET_REMOVAL_SECONDS: 3,     // touch must report no head contact for 3 s
 
   // HC-SR04 Ultrasonic
   ULTRASONIC_WARN_CM:   100,     // obstacle < 100 cm → WARN
@@ -169,7 +170,13 @@ export function evaluateAlerts(d: SensorReading): AlertLevel {
     }
   }
 
-  // 5. DHT22 heat index
+  // 5. Rear IR proximity
+  if (d.irDetecting && priority < 1) {
+    level = "REAR WARN";
+    priority = 1;
+  }
+
+  // 6. DHT22 heat index
   if (d.heatIndex !== null) {
     if (d.heatIndex >= THRESHOLDS.HEAT_INDEX_EXTREME && priority < 2) {
       level = "HEAT EXTREME";
@@ -183,7 +190,7 @@ export function evaluateAlerts(d: SensorReading): AlertLevel {
     }
   }
 
-  // 6. BH1750 low light
+  // 7. BH1750 low light
   if (d.lux !== null && d.lux < THRESHOLDS.LOW_LIGHT_LUX && priority < 1) {
     level = "LOW LIGHT";
     priority = 1;
@@ -201,7 +208,8 @@ export function safetyScore(level: AlertLevel): number {
     case "LOW LIGHT":
     case "HEAT CAUTION":
     case "PROX WARN":
-    case "TOF WARN":     return 74.0;
+    case "TOF WARN":
+    case "REAR WARN":    return 74.0;
     case "HEAT DANGER":
     case "HEAT EXTREME":
     case "PROX DANGER":
@@ -228,6 +236,8 @@ export function friendlyHeroHeadline(level: AlertLevel): string {
     case "PROX WARN":
     case "TOF WARN":
       return "Something is getting close";
+    case "REAR WARN":
+      return "Something is close behind you";
     case "PROX DANGER":
     case "TOF DANGER":
       return "Obstacle very close — move back";
@@ -260,6 +270,7 @@ export function readableAlertName(level: AlertLevel): string {
     "HEAT EXTREME": "Heat — extreme",
     "PROX WARN": "Distance — caution",
     "TOF WARN": "Laser distance — caution",
+    "REAR WARN": "Rear sensor — caution",
     "PROX DANGER": "Distance — danger",
     "TOF DANGER": "Laser distance — danger",
     "HELMET OFF": "Helmet removed",

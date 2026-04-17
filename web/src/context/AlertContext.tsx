@@ -25,6 +25,10 @@ interface AlertContextValue {
   activeAlert: AlertInfo | null;
   triggerAlert: (alert: AlertInfo) => void;
   dismissAlert: () => void;
+  overlayEnabled: boolean;
+  setOverlayEnabled: (enabled: boolean) => void;
+  dismissedAlertKey: string | null;
+  setDismissedAlertKey: (key: string | null) => void;
 }
 
 const AlertContext = createContext<AlertContextValue | null>(null);
@@ -135,8 +139,20 @@ function startAlarm(ctx: AudioContext, type: AlarmType) {
 // ─────────────────────────────────────────────────────────────
 //  Provider
 // ─────────────────────────────────────────────────────────────
+const OVERLAY_ENABLED_KEY = "red_alert_overlay_enabled";
+
+function readInitialOverlayEnabled(): boolean {
+  try {
+    return localStorage.getItem(OVERLAY_ENABLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function AlertProvider({ children }: { children: ReactNode }) {
   const [activeAlert, setActiveAlert] = useState<AlertInfo | null>(null);
+  const [overlayEnabled, setOverlayEnabledState] = useState<boolean>(readInitialOverlayEnabled);
+  const [dismissedAlertKey, setDismissedAlertKey] = useState<string | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
 
   const triggerAlert = useCallback((alert: AlertInfo) => {
@@ -158,8 +174,25 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     setActiveAlert(null);
   }, []);
 
+  const setOverlayEnabled = useCallback((enabled: boolean) => {
+    try {
+      localStorage.setItem(OVERLAY_ENABLED_KEY, enabled ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    setOverlayEnabledState(enabled);
+    if (!enabled) {
+      if (ctxRef.current) {
+        ctxRef.current.close();
+        ctxRef.current = null;
+      }
+      setActiveAlert(null);
+      setDismissedAlertKey(null);
+    }
+  }, []);
+
   return (
-    <AlertContext.Provider value={{ activeAlert, triggerAlert, dismissAlert }}>
+    <AlertContext.Provider value={{ activeAlert, triggerAlert, dismissAlert, overlayEnabled, setOverlayEnabled, dismissedAlertKey, setDismissedAlertKey }}>
       {children}
     </AlertContext.Provider>
   );

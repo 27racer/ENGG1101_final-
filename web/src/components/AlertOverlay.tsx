@@ -91,9 +91,11 @@ const SENSOR_ICON: Record<AlarmType, JSX.Element> = {
 };
 
 export function AlertOverlay() {
-  const { activeAlert, dismissAlert } = useAlerts();
+  const { activeAlert, dismissAlert, setDismissedAlertKey } = useAlerts();
 
   if (!activeAlert) return null;
+
+  const alertKey = `${activeAlert.alarmType}:${activeAlert.type}:${activeAlert.detail}`;
 
   return (
     <div
@@ -127,7 +129,10 @@ export function AlertOverlay() {
         <button
           type="button"
           className="alert-overlay__dismiss"
-          onClick={dismissAlert}
+          onClick={() => {
+            setDismissedAlertKey(alertKey);
+            dismissAlert();
+          }}
         >
           DISMISS ALARM
         </button>

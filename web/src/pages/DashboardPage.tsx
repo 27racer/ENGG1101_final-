@@ -1,37 +1,18 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BrandLogo } from "../components/brand/BrandLogo";
+import { useAlerts, type AlarmType } from "../context/AlertContext";
 import { useSensorData } from "../context/SensorDataContext";
 import { buildInstalledSystems } from "../sensorTelemetryContent";
 import {
   countPopulatedSensorChannels,
   readableAlertName,
+  type AlertLevel,
 } from "../types/sensorData";
 
 const HelmetViewer = lazy(() =>
   import("../components/HelmetViewer").then((m) => ({ default: m.HelmetViewer }))
 );
-
-function SignalIcon() {
-  return (
-    <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden>
-      <rect x="0" y="8" width="3" height="4" rx="1" />
-      <rect x="4.5" y="5" width="3" height="7" rx="1" />
-      <rect x="9" y="2.5" width="3" height="9.5" rx="1" />
-      <rect x="13.5" y="0" width="2.5" height="12" rx="1" />
-    </svg>
-  );
-}
-
-function BatteryIcon() {
-  return (
-    <svg width="22" height="12" viewBox="0 0 22 12" fill="currentColor" aria-hidden>
-      <rect x="0" y="1" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1" fill="none" />
-      <rect x="1.5" y="2.5" width="13" height="7" rx="1" />
-      <path d="M19 4.5v3a1.5 1.5 0 000-3z" />
-    </svg>
-  );
-}
 
 function IconBell() {
   return (
@@ -42,8 +23,75 @@ function IconBell() {
   );
 }
 
+function IconBellOff() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M14 18a2 2 0 11-4 0h4z" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
+      <path d="M6.5 16h11l-1-8.5A4 4 0 0012.5 4h-1a4 4 0 00-4 3.5L6.5 16z" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
+      <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function toOverlayAlert(level: AlertLevel, data: { temperature: number | null; usDist: number | null }) {
+  const map: Partial<Record<AlertLevel, { sensor: string; type: string; alarmType: AlarmType; detail: string }>> = {
+    "PROX WARN": {
+      sensor: "Front distance",
+      type: "Obstacle nearby",
+      alarmType: "proximity",
+      detail: data.usDist != null ? `Ultrasonic sees ${data.usDist.toFixed(1)} cm ahead.` : "Object detected close to the worker.",
+    },
+    "PROX DANGER": {
+      sensor: "Front distance",
+      type: "Obstacle very close",
+      alarmType: "proximity",
+      detail: data.usDist != null ? `Ultrasonic sees ${data.usDist.toFixed(1)} cm ahead.` : "Object dangerously close to the worker.",
+    },
+    "HEAT CAUTION": {
+      sensor: "Heat monitor",
+      type: "Heat caution",
+      alarmType: "heat",
+      detail: data.temperature != null ? `Measured temperature is ${data.temperature.toFixed(1)}°C.` : "Helmet climate is getting warm.",
+    },
+    "HEAT DANGER": {
+      sensor: "Heat monitor",
+      type: "Heat danger",
+      alarmType: "heat",
+      detail: data.temperature != null ? `Measured temperature is ${data.temperature.toFixed(1)}°C.` : "Helmet climate has reached a dangerous level.",
+    },
+    "HEAT EXTREME": {
+      sensor: "Heat monitor",
+      type: "Extreme heat",
+      alarmType: "heat",
+      detail: data.temperature != null ? `Measured temperature is ${data.temperature.toFixed(1)}°C.` : "Helmet climate is at an extreme level.",
+    },
+    "HELMET OFF": {
+      sensor: "Helmet sensor",
+      type: "Helmet removed",
+      alarmType: "helmet_off",
+      detail: "Touch sensor no longer detects the helmet being worn.",
+    },
+    "!! FALL !!": {
+      sensor: "Fall detector",
+      type: "Possible fall detected",
+      alarmType: "fall",
+      detail: "Motion pattern matched the helmet fall-detection logic.",
+    },
+  };
+
+  return map[level] ?? null;
+}
+
 export function DashboardPage() {
   const { data, alertLevel, connectionStatus } = useSensorData();
+  const {
+    triggerAlert,
+    dismissAlert,
+    overlayEnabled,
+    setOverlayEnabled,
+    dismissedAlertKey,
+    setDismissedAlertKey,
+  } = useAlerts();
   const [expandedReadingId, setExpandedReadingId] = useState<string | null>(null);
   const isLive = connectionStatus === "live";
 
@@ -64,18 +112,35 @@ export function DashboardPage() {
     year: "numeric",
   });
 
+  const overlayAlert = toOverlayAlert(alertLevel, {
+    temperature: data.temperature,
+    usDist: data.usDist,
+  });
+  const overlayAlertKey = overlayAlert
+    ? `${overlayAlert.alarmType}:${overlayAlert.type}:${overlayAlert.detail}`
+    : null;
+
+  useEffect(() => {
+    if (!overlayAlertKey || dismissedAlertKey === overlayAlertKey) return;
+    setDismissedAlertKey(null);
+  }, [dismissedAlertKey, overlayAlertKey, setDismissedAlertKey]);
+
+  useEffect(() => {
+    if (!overlayEnabled) {
+      dismissAlert();
+      return;
+    }
+    if (overlayAlert && dismissedAlertKey !== overlayAlertKey) {
+      triggerAlert(overlayAlert);
+    } else {
+      dismissAlert();
+    }
+  }, [dismissAlert, dismissedAlertKey, overlayAlert, overlayAlertKey, overlayEnabled, triggerAlert]);
+
   return (
     <div className="page page--home">
       <div className="page-hero-gradient">
         <div className="page-hero-gradient__inner">
-          <div className="status-bar">
-            <span>9:41</span>
-            <div className="status-bar__icons">
-              <SignalIcon />
-              <BatteryIcon />
-            </div>
-          </div>
-
           <div className="hero-top-row">
             <div className="hero-brand">
               <div className="hero-brand__logo-wrap" aria-hidden>
@@ -86,8 +151,21 @@ export function DashboardPage() {
                 <span className="hero-brand__tagline">Worksite safety · BLE · IoT</span>
               </div>
             </div>
-            <button type="button" className="hero-bell" aria-label="Notifications (coming soon)">
-              <IconBell />
+            <button
+              type="button"
+              className={`hero-bell${overlayEnabled ? " hero-bell--active" : ""}`}
+              aria-label={overlayEnabled ? "Turn red alert screens off" : "Turn red alert screens on"}
+              aria-pressed={overlayEnabled}
+              onClick={() => {
+                const next = !overlayEnabled;
+                setOverlayEnabled(next);
+                if (next) {
+                  setDismissedAlertKey(null);
+                }
+              }}
+              title={overlayEnabled ? "Red alert screens ON" : "Red alert screens OFF"}
+            >
+              {overlayEnabled ? <IconBell /> : <IconBellOff />}
             </button>
           </div>
 
@@ -203,9 +281,9 @@ export function DashboardPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
-                            title="Alert overlay disabled"
+                            title="Use the top-right bell button to control red alert screens"
                           >
-                            Test alarm disabled
+                            Red alert control moved to bell icon
                           </button>
                         </div>
                       ) : null}
@@ -214,8 +292,7 @@ export function DashboardPage() {
                 })}
               </div>
               <p className="at-a-glance-hint hint">
-                <strong>Test alarm</strong> plays the full-screen alert for practice — it does not
-                change hardware.
+                <strong>Red alert screen</strong> is now controlled by the bell icon at the top right of the home screen.
               </p>
             </div>
           </div>
