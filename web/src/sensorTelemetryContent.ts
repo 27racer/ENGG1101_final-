@@ -83,10 +83,10 @@ export function buildInstalledSystems(data: SensorReading): InstalledSystemRow[]
       id: "climate",
       readingLabel: "Heat index",
       valueShort:
-        data.heatIndex != null ? `${data.heatIndex.toFixed(1)} °C` : "—",
+        data.heatIndex != null ? `${data.heatIndex.toFixed(1)}` : "—",
       detailText:
         data.temperature != null && data.humidity != null && data.heatIndex != null
-          ? `${data.heatIndex.toFixed(1)} °C heat index · ${data.temperature.toFixed(1)} °C air · ${data.humidity.toFixed(0)}% RH. DHT22.`
+          ? `${data.heatIndex.toFixed(1)} heat index · ${data.temperature.toFixed(1)} °C air · ${data.humidity.toFixed(0)}% RH. DHT22.`
           : "Waiting for temperature / humidity readings. DHT22.",
       hardware: "DHT22",
       pct: heatPercent(data.heatIndex),
